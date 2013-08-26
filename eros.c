@@ -4,15 +4,37 @@
  * the stdscr.
  */
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdint.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #define WIDTH		20
 #define HEIGHT		20
 #define COLOR_TIME	1
 #define COLOR_SCORE	2
 #define COLOR_BRICK	3
+#define WATTRON(w, n)	wattron(w, COLOR_PAIR(n))
+#define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
-uint64_t time = 0, score = 0;
+uint64_t secs = 0, score = 0;
+
+#define UPDATE_TIME()				\
+	do{					\
+		WATTRON(stdscr, COLOR_TIME);	\
+		mvwprintw(stdscr, 3, 2+WIDTH+2, "%02ld:%02ld:%02ld", secs/3600, (secs/60)%60, secs%60);	\
+		WATTROFF(stdscr, COLOR_TIME);	\
+	}while(0)
+
+void *timer(void *args){
+	while(1){
+		sleep(1);
+		secs++;
+		UPDATE_TIME();
+		wrefresh(stdscr);
+	}
+	return NULL;
+}
 
 int main(){
 	initscr();
@@ -24,20 +46,20 @@ int main(){
 	init_pair(COLOR_BRICK, COLOR_BLACK, COLOR_GREEN);
 	WINDOW *display = newwin(HEIGHT, WIDTH, 1, 1);
 	box(display, 0, 0);
-	wattron(display, COLOR_PAIR(COLOR_BRICK));
+	WATTRON(display, COLOR_BRICK);
 	mvwprintw(display, 3, 3, "   ");
 	mvwprintw(display, 4, 4, " ");
-	wattroff(display, COLOR_PAIR(COLOR_BRICK));
+	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 	mvwprintw(stdscr, 2, 2+WIDTH+2, "Time:");
-	wattron(stdscr, COLOR_PAIR(COLOR_TIME));
-	mvwprintw(stdscr, 3, 2+WIDTH+2, "%02d:%02d:%02d", time/3600, (time/60)%60, time%60);
-	wattroff(stdscr, COLOR_PAIR(COLOR_TIME));
+	UPDATE_TIME();
 	mvwprintw(stdscr, 4, 2+WIDTH+2, "Score:");
-	wattron(stdscr, COLOR_PAIR(COLOR_SCORE));
-	mvwprintw(stdscr, 5, 2+WIDTH+2, "%8d", score);
-	wattroff(stdscr, COLOR_PAIR(COLOR_SCORE));
+	WATTRON(stdscr, COLOR_SCORE);
+	mvwprintw(stdscr, 5, 2+WIDTH+2, "%8ld", score);
+	WATTROFF(stdscr, COLOR_SCORE);
 	wrefresh(stdscr);
+	pthread_t pt;
+	pthread_create(&pt, NULL, timer, NULL);
 	getch();
 	endwin();
 	return 0;
