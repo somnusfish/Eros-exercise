@@ -36,11 +36,10 @@ uint64_t secs = 0, score = 0;
 
 int kbhit(void){
 	int ch;
-	if((ch = wgetch(stdscr))!=EOF){
-		ungetch(ch);
-		return TRUE;
-	}
-	return FALSE;
+	if((ch = wgetch(stdscr))==EOF)
+		return FALSE;
+	ungetch(ch);
+	return TRUE;
 }
 
 void *Timer(void *args){
