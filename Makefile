@@ -1,6 +1,6 @@
 CC = clang
 CFLAGS = -O4 `llvm-config --cflags --ldflags`
-LIBS = `llvm-config --libs core` -lncurses
+LIBS = `llvm-config --libs core` -lncurses -lpthread
 
 .PHONY: all
 all: eros
