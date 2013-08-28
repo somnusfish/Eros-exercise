@@ -1,3 +1,4 @@
+CC = clang
 CFLAGS = -O4 `llvm-config --cflags --ldflags`
 LIBS = `llvm-config --libs core` -lncurses
 
