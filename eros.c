@@ -26,6 +26,7 @@
 WINDOW *display;
 bool fail = false;
 uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0}, curr_h = HEIGHT;
+uint64_t curr_cen , curr_shape , curr_pos;
 
 void update_time(){
 	WATTRON(stdscr, COLOR_TIME);
@@ -83,6 +84,9 @@ void new_brick(){
 	curr_h = HEIGHT-4;
 	curr[0] = 0x4;
 	curr[1] = 0xE;
+	curr_cen = 0x2;
+	curr_shape = 0;
+	curr_pos = 0;
 }
 
 void mv_left(){
@@ -92,6 +96,7 @@ void mv_left(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
+	curr_cen <<= 1;
 	show_bricks();
 }
 
@@ -102,6 +107,7 @@ void mv_right(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] >>= 1);
+	curr_cen >>= 1;
 	show_bricks();
 }
 
@@ -119,6 +125,56 @@ void mv_down(){
 	show_bricks();
 }
 
+void turn(){
+	switch (curr_shape){
+	case 0:{
+		switch (curr_pos){
+			case 0:{
+				uint64_t temp = curr_cen<<1;
+				if((temp&map[curr_h+2])!=0)
+					return;
+				curr[1] &= (~curr_cen);
+				curr[2] |= curr_cen<<1;
+				curr_pos = 1;
+				curr_cen <<= 1;
+			       }
+			       break;
+			case 1:{
+				uint64_t temp = curr_cen>>1;
+				if(((curr[1]%2)!=0)||((temp&map[curr_h+1])!=0))
+					return;
+				curr[0] &= (~curr_cen);
+				curr[1] |= curr_cen>>1;
+				curr_pos = 2;
+				curr_cen >>= 1;
+			       }
+			       break;
+			case 2:{
+				uint64_t temp = curr_cen<<1;
+				if((temp&map[curr_h])!=0)
+					return;
+				curr[0] |= curr_cen<<1;
+				curr[1] &= (~(curr_cen<<2));
+				curr_pos = 3;
+			       }
+			       break;
+			case 3:{
+				uint64_t temp = curr_cen<<2;
+				if(((temp&BARRIER_W)!=0) || ((temp&map[curr_h+1])!=0))
+					return;
+				curr[1] |= curr_cen<<2;
+				curr[2] &= (~(curr_cen<<1));
+				curr_pos = 0;
+			       }
+			       break;
+
+		}
+		break;
+
+	       }
+	       break;
+	}
+}
 void *Timer(void *args){
 	while(1){
 		update_time();
@@ -161,6 +217,7 @@ int main(){
 		 */
 		switch(getch()){
 		case 'w':
+			turn();
 			break;
 		case 'a':
 			mv_left();
