@@ -25,7 +25,8 @@
 
 WINDOW *display;
 bool fail = false;
-uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0}, curr_h = HEIGHT;
+uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0};
+int curr_h = HEIGHT;
 
 void update_time(){
 	WATTRON(stdscr, COLOR_TIME);
@@ -43,14 +44,14 @@ void show_bricks(){
 	wclear(display);
 	box(display, 0, 0);
 	WATTRON(display, COLOR_BRICK);
-	for(int i = 0; i<HEIGHT; i++)
+	for(int i = 1; i<=HEIGHT; i++)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(map[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-i, ((WIDTH-j)<<1)-1, "  ");
-	for(int i = 0; i<4; i++)
+				mvwprintw(display, HEIGHT-i+1, ((WIDTH-j)<<1)-1, "  ");
+	for(int i = 3; i>=0; i--)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(curr[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-(curr_h+i), ((WIDTH-j)<<1)-1, "  ");
+				mvwprintw(display, HEIGHT-curr_h-i, ((WIDTH-j)<<1)-1, "  ");
 	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 }
@@ -65,9 +66,10 @@ int kbhit(void){
 
 void new_brick(){
 	for(int i = 0; i<4; i++)
-		map[curr_h+i] |= curr[i];
-	int j = curr_h+4, k = 0;
-	for(int i = curr_h; i<j; i++){
+		if(curr_h+i>0)
+			map[curr_h+i] |= curr[i];
+	int temp = curr_h<1? 1 : curr_h, j = temp+4, k = 0;
+	for(int i = temp; i<j; i++){
 		map[i-k] = map[i];
 		if(map[i]==FULLROW){
 			score++;
@@ -97,6 +99,8 @@ void mv_left(){
 
 void mv_right(){
 	for(int i = 0; i<4; i++){
+		if(curr_h+i<0)
+			continue;
 		uint64_t temp = curr[i]>>1;
 		if(((curr[i]%2)!=0)||((temp&map[curr_h+i])!=0))
 			return;
@@ -106,15 +110,14 @@ void mv_right(){
 }
 
 void mv_down(){
-	if(curr_h==0){
-		new_brick();
-		return;
-	}
-	for(int i = 0; i<4; i++)
+	for(int i = 0; i<4; i++){
+		if(curr_h-1+i<0)
+			continue;
 		if((curr[i]&map[curr_h-1+i])!=0){
 			new_brick();
 			return;
 		}
+	}
 	curr_h--;
 	show_bricks();
 }
@@ -132,8 +135,8 @@ void *Timer(void *args){
 }
 
 int main(){
-	for(int i = 0; i<HEIGHT; map[i++] = 0);
-	map[HEIGHT] = ALLONES;
+	for(int i = 1; i<=HEIGHT; map[i++] = 0);
+	map[0] = map[HEIGHT+1] = ALLONES;
 	initscr();
 	curs_set(0);
 	noecho();
