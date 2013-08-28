@@ -24,25 +24,22 @@
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
 WINDOW *display;
+bool fail = false;
 uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0}, curr_h = HEIGHT;
 
-void inline update_time(){
+void update_time(){
 	WATTRON(stdscr, COLOR_TIME);
 	mvwprintw(stdscr, 3, 2+WIDTH+2+2, "%02ld:%02ld:%02ld", secs/3600, (secs/60)%60, secs%60);
 	WATTROFF(stdscr, COLOR_TIME);
 }
 
-void inline update_score(){
+void update_score(){
 	WATTRON(stdscr, COLOR_SCORE);
 	mvwprintw(stdscr, 5, 2+WIDTH+2+2, "%8ld", score);
 	WATTROFF(stdscr, COLOR_SCORE);
 }
 
-/*
- * FIXME: if add inline attr to show_brick(), the compiler(clang 3.2.1) will
- *        not be able to find show_brick() correctly.
- */
-void show_brick(){
+void show_bricks(){
 	wclear(display);
 	box(display, 0, 0);
 	WATTRON(display, COLOR_BRICK);
@@ -59,38 +56,56 @@ void show_brick(){
 }
 
 int kbhit(void){
-	int ch;
-	if((ch = wgetch(stdscr))==EOF)
+	int ch = wgetch(stdscr);
+	if(ch==EOF)
 		return FALSE;
 	ungetch(ch);
 	return TRUE;
 }
 
-void inline new_brick(){
+void new_brick(){
+	for(int i = 0; i<4; i++)
+		map[curr_h+i] |= curr[i];
+	int j = curr_h+4, k = 0;
+	for(int i = curr_h; i<j; i++){
+		map[i-k] = map[i];
+		if(map[i]==FULLROW){
+			score++;
+			k++;
+			j = HEIGHT;
+		}
+	}
+	for(int i = HEIGHT-k; i<HEIGHT; i++)
+		map[i] = 0;
+	/*
+	 * TODO: Add a complete method to generate a new brick.
+	 */
 	curr_h = HEIGHT-4;
 	curr[0] = 0x4;
 	curr[1] = 0xE;
 }
 
-void inline mv_left(){
+void mv_left(){
 	for(int i = 0; i<4; i++){
 		uint64_t temp = curr[i]<<1;
 		if(((temp&BARRIER_W)!=0)||((temp&map[curr_h+i])!=0))
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
+	show_bricks();
 }
 
-void inline mv_right(){
+void mv_right(){
 	for(int i = 0; i<4; i++){
 		uint64_t temp = curr[i]>>1;
-		if(((temp%2)!=0)||((temp&map[curr_h+i])!=0))
+		if(((curr[i]%2)!=0)||((temp&map[curr_h+i])!=0))
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] >>= 1);
+	show_bricks();
 }
 
-void inline mv_down(){
+void mv_down(){
 	if(curr_h==0){
 		new_brick();
 		return;
@@ -101,16 +116,17 @@ void inline mv_down(){
 			return;
 		}
 	curr_h--;
+	show_bricks();
 }
 
 void *Timer(void *args){
 	while(1){
-		usleep(1000000);
-		secs++;
 		update_time();
 		wrefresh(stdscr);
+		usleep(1000000);
+		secs++;
 		mv_down();
-		show_brick();
+		show_bricks();
 	}
 	return NULL;
 }
@@ -120,6 +136,7 @@ int main(){
 	map[HEIGHT] = ALLONES;
 	initscr();
 	curs_set(0);
+	noecho();
 	start_color();
 	leaveok(stdscr, TRUE);
 	wrefresh(stdscr);
@@ -129,15 +146,34 @@ int main(){
 	display = newwin(HEIGHT+2, WIDTH+2, 1, 1);
 	leaveok(display, TRUE);
 	new_brick();
-	show_brick();
+	show_bricks();
 	mvwprintw(stdscr, 2, 2+WIDTH+2+2, "Time:");
-	update_time();
 	mvwprintw(stdscr, 4, 2+WIDTH+2+2, "Score:");
 	update_score();
 	wrefresh(stdscr);
 	pthread_t timer;
 	pthread_create(&timer, NULL, Timer, NULL);
 	nodelay(stdscr, FALSE);
-	while(!kbhit());
+	while(!fail){
+		while(!kbhit());
+		/*
+		 * TODO: Add input handle here.
+		 */
+		switch(getch()){
+		case 'w':
+			break;
+		case 'a':
+			mv_left();
+			break;
+		case 's':
+			mv_down();
+			break;
+		case 'd':
+			mv_right();
+			break;
+		case 'q':
+			EXIT(0);
+		}
+	}
 	EXIT(0);
 }
