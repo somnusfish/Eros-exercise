@@ -51,7 +51,7 @@ void show_bricks(){
 	for(int i = 3; i>=0; i--)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(curr[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-curr_h-i, ((WIDTH-j)<<1)-1, "  ");
+				mvwprintw(display, HEIGHT-curr_h-i+1, ((WIDTH-j)<<1)-1, "  ");
 	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 }
@@ -77,12 +77,14 @@ void new_brick(){
 			j = HEIGHT;
 		}
 	}
-	for(int i = HEIGHT-k; i<HEIGHT; i++)
+	for(int i = HEIGHT+1-k; i<=HEIGHT; i++)
 		map[i] = 0;
+	if(k>0)
+		update_score();
 	/*
 	 * TODO: Add a complete method to generate a new brick.
 	 */
-	curr_h = HEIGHT-4;
+	curr_h = HEIGHT-3;
 	curr[0] = 0x4;
 	curr[1] = 0xE;
 	curr[2] = 0x0;
@@ -223,6 +225,7 @@ int main(){
 		switch(getch()){
 		case 'w':
 			turn();
+			show_bricks();
 			break;
 		case 'a':
 			mv_left();
