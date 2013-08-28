@@ -30,13 +30,13 @@ uint64_t curr_cen , curr_shape , curr_pos;
 
 void update_time(){
 	WATTRON(stdscr, COLOR_TIME);
-	mvwprintw(stdscr, 3, 2+WIDTH+2+2, "%02ld:%02ld:%02ld", secs/3600, (secs/60)%60, secs%60);
+	mvwprintw(stdscr, 3, 2+(WIDTH<<1)+2+2, "%02ld:%02ld:%02ld", secs/3600, (secs/60)%60, secs%60);
 	WATTROFF(stdscr, COLOR_TIME);
 }
 
 void update_score(){
 	WATTRON(stdscr, COLOR_SCORE);
-	mvwprintw(stdscr, 5, 2+WIDTH+2+2, "%8ld", score);
+	mvwprintw(stdscr, 5, 2+(WIDTH<<1)+2+2, "%8ld", score);
 	WATTROFF(stdscr, COLOR_SCORE);
 }
 
@@ -47,11 +47,11 @@ void show_bricks(){
 	for(int i = 0; i<HEIGHT; i++)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(map[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-i, WIDTH-j, " ");
+				mvwprintw(display, HEIGHT-i, ((WIDTH-j)<<1)-1, "  ");
 	for(int i = 0; i<4; i++)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(curr[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-(curr_h+i), WIDTH-j, " ");
+				mvwprintw(display, HEIGHT-(curr_h+i), ((WIDTH-j)<<1)-1, "  ");
 	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 }
@@ -199,12 +199,12 @@ int main(){
 	init_pair(COLOR_TIME, COLOR_YELLOW, COLOR_BLACK);
 	init_pair(COLOR_SCORE, COLOR_RED, COLOR_BLACK);
 	init_pair(COLOR_BRICK, COLOR_BLACK, COLOR_GREEN);
-	display = newwin(HEIGHT+2, WIDTH+2, 1, 1);
+	display = newwin(HEIGHT+2, (WIDTH<<1)+2, 1, 1);
 	leaveok(display, TRUE);
 	new_brick();
 	show_bricks();
-	mvwprintw(stdscr, 2, 2+WIDTH+2+2, "Time:");
-	mvwprintw(stdscr, 4, 2+WIDTH+2+2, "Score:");
+	mvwprintw(stdscr, 2, 2+(WIDTH<<1)+2+2, "Time:");
+	mvwprintw(stdscr, 4, 2+(WIDTH<<1)+2+2, "Score:");
 	update_score();
 	wrefresh(stdscr);
 	pthread_t timer;
