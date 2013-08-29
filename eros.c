@@ -25,7 +25,8 @@
 
 WINDOW *display;
 bool fail = false;
-uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0}, curr_h = HEIGHT;
+uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0};
+int curr_h = HEIGHT;
 uint64_t curr_w , curr_shape , curr_pos;
 uint64_t brick[7][4][4] = {
 	{{0x4,0xE},{0x4,0xC,0x4},{0,0xE,0x4},{0x4,0x6,0x4}},
@@ -53,14 +54,14 @@ void show_bricks(){
 	wclear(display);
 	box(display, 0, 0);
 	WATTRON(display, COLOR_BRICK);
-	for(int i = 0; i<HEIGHT; i++)
+	for(int i = 1; i<=HEIGHT; i++)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(map[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-i, ((WIDTH-j)<<1)-1, "  ");
-	for(int i = 0; i<4; i++)
+				mvwprintw(display, HEIGHT-i+1, ((WIDTH-j)<<1)-1, "  ");
+	for(int i = 3; i>=0; i--)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(curr[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-(curr_h+i), ((WIDTH-j)<<1)-1, "  ");
+				mvwprintw(display, HEIGHT-curr_h-i+1, ((WIDTH-j)<<1)-1, "  ");
 	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 }
@@ -75,9 +76,10 @@ int kbhit(void){
 
 void new_brick(){
 	for(int i = 0; i<4; i++)
-		map[curr_h+i] |= curr[i];
-	int j = curr_h+4, k = 0;
-	for(int i = curr_h; i<j; i++){
+		if(curr_h+i>0)
+			map[curr_h+i] |= curr[i];
+	int temp = curr_h<1? 1 : curr_h, j = temp+4, k = 0;
+	for(int i = temp; i<j; i++){
 		map[i-k] = map[i];
 		if(map[i]==FULLROW){
 			score++;
@@ -85,17 +87,20 @@ void new_brick(){
 			j = HEIGHT;
 		}
 	}
-	for(int i = HEIGHT-k; i<HEIGHT; i++)
+	for(int i = HEIGHT+1-k; i<=HEIGHT; i++)
 		map[i] = 0;
+	if(k>0)
+		update_score();
 	/*
 	 * TODO: Add a complete method to generate a new brick.
 	 */
-	curr_h = HEIGHT-4;
-	curr[0] = 0x3;
-	curr[1] = 0x6;
-	//curr[2] = 0x2;
-	curr_w = 0x0;
-	curr_shape = 6;
+	curr_h = HEIGHT-3;
+	curr[0] = 0x4;
+	curr[1] = 0xE;
+	curr[2] = 0x0;
+	curr[3] = 0x0;
+	curr_w = 0x1;
+	curr_shape = 0;
 	curr_pos = 0;
 }
 
@@ -112,6 +117,8 @@ void mv_left(){
 
 void mv_right(){
 	for(int i = 0; i<4; i++){
+		if(curr_h+i<0)
+			continue;
 		uint64_t temp = curr[i]>>1;
 		if(((curr[i]%2)!=0)||((temp&map[curr_h+i])!=0))
 			return;
@@ -122,15 +129,14 @@ void mv_right(){
 }
 
 void mv_down(){
-	if(curr_h==0){
-		new_brick();
-		return;
-	}
-	for(int i = 0; i<4; i++)
+	for(int i = 0; i<4; i++){
+		if(curr_h-1+i<0)
+			continue;
 		if((curr[i]&map[curr_h-1+i])!=0){
 			new_brick();
 			return;
 		}
+	}
 	curr_h--;
 	show_bricks();
 }
@@ -156,6 +162,7 @@ void turn(){
 	}
 	
 }
+
 void *Timer(void *args){
 	while(1){
 		update_time();
@@ -169,8 +176,8 @@ void *Timer(void *args){
 }
 
 int main(){
-	for(int i = 0; i<HEIGHT; map[i++] = 0);
-	map[HEIGHT] = ALLONES;
+	for(int i = 1; i<=HEIGHT; map[i++] = 0);
+	map[0] = map[HEIGHT+1] = ALLONES;
 	initscr();
 	curs_set(0);
 	noecho();
@@ -199,6 +206,7 @@ int main(){
 		switch(getch()){
 		case 'w':
 			turn();
+			show_bricks();
 			break;
 		case 'a':
 			mv_left();
