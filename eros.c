@@ -129,7 +129,7 @@ void new_brick(){
 	int irand = rand();
 	curr_shape = irand%7;
 	curr_pos = irand%4;
-	curr_w = (WIDTH>>1)-2;
+	curr_w = (WIDTH-4)>>1;
 	for(int i = 0; i<4; i++)
 		curr[i] = brick[curr_shape][curr_pos][i]<<curr_w;
 	curr_h = HEIGHT-3;
@@ -245,6 +245,7 @@ void *Timer(void *args){
 
 void *Handler(void *args){
 	while(!fail){
+		RELAX();
 		if(!kbhit())
 			continue;
 		input = getch();
@@ -265,11 +266,11 @@ int main(){
 	leaveok(stdscr, TRUE);
 	wrefresh(stdscr);
 	init_pair(COLOR_TIME,  COLOR_YELLOW, COLOR_BLACK);
-	init_pair(COLOR_SCORE, COLOR_RED, COLOR_BLACK);
-	init_pair(COLOR_BRICK, COLOR_BLACK, COLOR_GREEN);
-	init_pair(COLOR_LEVEL, COLOR_BLUE, COLOR_BLACK);
-	init_pair(COLOR_HINT,  COLOR_BLACK, COLOR_WHITE);
-	init_pair(COLOR_CONG,  COLOR_CYAN, COLOR_MAGENTA);
+	init_pair(COLOR_SCORE, COLOR_RED,    COLOR_BLACK);
+	init_pair(COLOR_BRICK, COLOR_BLACK,  COLOR_GREEN);
+	init_pair(COLOR_LEVEL, COLOR_BLUE,   COLOR_BLACK);
+	init_pair(COLOR_HINT,  COLOR_BLACK,  COLOR_WHITE);
+	init_pair(COLOR_CONG,  COLOR_CYAN,   COLOR_MAGENTA);
 	WINDOW *display_border = newwin(HEIGHT+2, (WIDTH<<1)+2, 1, 1);
 	box(display_border, 0, 0);
 	wrefresh(display_border);
