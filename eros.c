@@ -91,18 +91,7 @@ void new_brick(){
 		map[i] = 0;
 	if(k>0)
 		update_score();
-	/*
-	 * TODO: Add a complete method to generate a new brick.
-	 *
-	curr_h = HEIGHT-3;
-	curr[0] = 0x3;
-	curr[1] = 0x6;
-	curr[2] = 0x0;
-	curr[3] = 0x0;
-	curr_w = 0;
-	curr_shape = 6;
-	curr_pos = 0;
-	*/
+
 	srand((unsigned)time(NULL));
 	curr_shape = rand()%7;
 	curr_pos = rand()%4;
