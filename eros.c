@@ -13,17 +13,21 @@
 
 #define WIDTH		20					// WIDTH shouldn't be greater than 63.
 #define HEIGHT		20
+#define CONG_WIDTH	54
+#define CONG_HEIGHT	6
 #define COLOR_TIME	1
 #define COLOR_SCORE	2
 #define COLOR_BRICK	3
 #define COLOR_LEVEL	4
 #define COLOR_HINT	5
+#define COLOR_CONG	6
 #define ALLONES		(~((uint64_t)0))
 #define BARRIER_W	(((uint64_t)1)<<WIDTH)
 #define BARRIER_H	(((uint64_t)1)<<63)
 #define FULLROW		(BARRIER_W-1)
 #define EXIT(n)		do{ endwin(); exit(n); }while(0)
 #define RELAX()		usleep(10000);
+#define WBKGD(w, n)	wbkgd(w, COLOR_PAIR(n))
 #define WATTRON(w, n)	wattron(w, COLOR_PAIR(n))
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
@@ -262,11 +266,12 @@ int main(){
 	start_color();
 	leaveok(stdscr, TRUE);
 	wrefresh(stdscr);
-	init_pair(COLOR_TIME, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(COLOR_TIME,  COLOR_YELLOW, COLOR_BLACK);
 	init_pair(COLOR_SCORE, COLOR_RED, COLOR_BLACK);
 	init_pair(COLOR_BRICK, COLOR_BLACK, COLOR_GREEN);
 	init_pair(COLOR_LEVEL, COLOR_BLUE, COLOR_BLACK);
-	init_pair(COLOR_HINT, COLOR_BLACK, COLOR_WHITE);
+	init_pair(COLOR_HINT,  COLOR_BLACK, COLOR_WHITE);
+	init_pair(COLOR_CONG,  COLOR_CYAN, COLOR_MAGENTA);
 	WINDOW *display_border = newwin(HEIGHT+2, (WIDTH<<1)+2, 1, 1);
 	box(display_border, 0, 0);
 	wrefresh(display_border);
@@ -318,5 +323,23 @@ int main(){
 		}
 		RELAX();
 	}
+	pthread_join(handler, NULL);
+	pthread_join(timer, NULL);
+	int row, col;
+	getmaxyx(stdscr, row, col);
+	WINDOW *cong = newwin(CONG_HEIGHT, CONG_WIDTH, (row-CONG_HEIGHT)>>1, (col-CONG_WIDTH)>>1);
+	WBKGD(cong, COLOR_CONG);
+	wclear(cong);
+	box(cong, 0, 0);
+	mvwprintw(cong, 1, (CONG_WIDTH-16)>>1, "Congratulations!");
+	mvwprintw(cong, 2, 3, "You have getten %ld scores at level %ld.", score, level);
+	mvwprintw(cong, 3, 3, "Press ENTER to share with friends or just press ");
+	mvwprintw(cong, 4, 1, "any other key to quit.");
+	wrefresh(cong);
+	if(getch()!=10)
+		EXIT(0);
+	/*
+	 * TODO: share the scores and level on Renren.
+	 */
 	EXIT(0);
 }
