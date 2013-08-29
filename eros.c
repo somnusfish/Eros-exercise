@@ -25,9 +25,9 @@
 
 WINDOW *display;
 bool fail = false;
-uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0};
-int curr_h = HEIGHT;
-uint64_t curr_w , curr_shape , curr_pos;
+uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0};
+int curr_h = HEIGHT, curr_w;
+uint64_t curr_shape , curr_pos;
 uint64_t brick[7][4][4] = {
 	{{0x4,0xE},{0x4,0xC,0x4},{0,0xE,0x4},{0x4,0x6,0x4}},
 	{{0x3,0x3},{0x3,0x3},{0x3,0x3},{0x3,0x3}},
@@ -95,12 +95,12 @@ void new_brick(){
 	 * TODO: Add a complete method to generate a new brick.
 	 */
 	curr_h = HEIGHT-3;
-	curr[0] = 0x4;
-	curr[1] = 0xE;
+	curr[0] = 0x3;
+	curr[1] = 0x6;
 	curr[2] = 0x0;
 	curr[3] = 0x0;
-	curr_w = 0x1;
-	curr_shape = 0;
+	curr_w = 0;
+	curr_shape = 6;
 	curr_pos = 0;
 }
 
@@ -111,7 +111,7 @@ void mv_left(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
-	curr_w <<= 1;
+	curr_w++;
 	show_bricks();
 }
 
@@ -124,7 +124,7 @@ void mv_right(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] >>= 1);
-	curr_w >>= 1;
+	curr_w--;
 	show_bricks();
 }
 
@@ -144,15 +144,30 @@ void mv_down(){
 int test_collision(uint64_t test_brick[4]){
 	//if collision ,return 1,else ,return 0;
 	for(int i=0; i<4; i++){
-		if(((test_brick[i]&BARRIER_W)!=0)||((test_brick[i]&map[curr_h+i])!=0))
+		if((test_brick[i]&BARRIER_W)!=0)
 			return 1;
+		if(curr_w<0){
+			uint64_t temp;
+			temp = brick[curr_shape][(curr_pos+1)%4][i];
+			for(int i=1; i<=(-curr_w); i++){
+				if((temp%2)!=0)
+					return 1;
+				temp >>= 1;
+			}
+		}
+		if((test_brick[i]&map[curr_h+i])!=0)
+			return 1;
+
 	}
 	return 0;
 }
 void turn(){
 	uint64_t temp[4];
 	for(int i=0; i<4; i++){
-		temp[i] = brick[curr_shape][(curr_pos+1)%4][i]<<curr_w;
+		if(curr_w>=0)
+			temp[i] = brick[curr_shape][(curr_pos+1)%4][i]<<curr_w;
+		else
+			temp[i] = brick[curr_shape][(curr_pos+1)%4][i]>>(-curr_w);
 	}
 	if(!test_collision(temp)){
 		for(int i=0; i<4; i++){
