@@ -23,7 +23,7 @@
 #define BARRIER_H	(((uint64_t)1)<<63)
 #define FULLROW		(BARRIER_W-1)
 #define EXIT(n)		do{ endwin(); exit(n); }while(0)
-#define RELAX()		usleep(3000);
+#define RELAX()		usleep(10000);
 #define WATTRON(w, n)	wattron(w, COLOR_PAIR(n))
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
