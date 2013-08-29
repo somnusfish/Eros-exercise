@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 
 #define WIDTH		20					// WIDTH shouldn't be greater than 63.
 #define HEIGHT		20
@@ -92,7 +93,7 @@ void new_brick(){
 		update_score();
 	/*
 	 * TODO: Add a complete method to generate a new brick.
-	 */
+	 *
 	curr_h = HEIGHT-3;
 	curr[0] = 0x3;
 	curr[1] = 0x6;
@@ -101,6 +102,29 @@ void new_brick(){
 	curr_w = 0;
 	curr_shape = 6;
 	curr_pos = 0;
+	*/
+	srand((unsigned)time(NULL));
+	curr_shape = rand()%7;
+	curr_pos = rand()%4;
+	curr_w = (int)(WIDTH)/2-2;
+	for(int i=0; i<4; i++){
+		curr[i] = brick[curr_shape][curr_pos][i]<<curr_w;
+	}
+	curr_h = HEIGHT-3;
+	for(int i=3; i>-1; i--){
+		if(curr[i]==0){
+			curr_h++;
+		}
+		else{
+			break;
+		}
+	}
+	for(int i=0; i<4; i++){
+		if((curr[i]&map[curr_h+i])!=0)
+			fail = true;
+	}
+	
+
 }
 
 void mv_left(){
