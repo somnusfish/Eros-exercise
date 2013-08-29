@@ -99,7 +99,9 @@ void show_bricks(){
 }
 
 int kbhit(void){
+	wtimeout(stdscr, 0);
 	int ch = wgetch(stdscr);
+	nodelay(stdscr, FALSE);
 	if(ch==EOF)
 		return false;
 	ungetch(ch);
@@ -247,12 +249,10 @@ int main(){
 	map[0] = map[HEIGHT+1] = ALLONES;
 	srand((unsigned)time(NULL));
 	initscr();
-	nodelay(stdscr, FALSE);
 	curs_set(0);
 	noecho();
 	start_color();
 	leaveok(stdscr, TRUE);
-	wtimeout(stdscr, 0);
 	wrefresh(stdscr);
 	init_pair(COLOR_TIME,  COLOR_YELLOW, COLOR_BLACK);
 	init_pair(COLOR_SCORE, COLOR_RED,    COLOR_BLACK);
@@ -321,8 +321,6 @@ int main(){
 	mvwprintw(cong, 3, 1, "  Press ENTER to share with friends or just press ");
 	mvwprintw(cong, 4, 1, "any other key to quit.");
 	wrefresh(cong);
-	while(!kbhit())
-		RELAX();
 	if(getch()!=10)
 		EXIT(0);
 	/*
