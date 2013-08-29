@@ -16,17 +16,20 @@
 #define COLOR_TIME	1
 #define COLOR_SCORE	2
 #define COLOR_BRICK	3
+#define COLOR_LEVEL	4
+#define COLOR_HINT	5
 #define ALLONES		(~((uint64_t)0))
 #define BARRIER_W	(((uint64_t)1)<<WIDTH)
 #define BARRIER_H	(((uint64_t)1)<<63)
 #define FULLROW		(BARRIER_W-1)
 #define EXIT(n)		do{ endwin(); exit(n); }while(0)
+#define RELAX()		usleep(3000);
 #define WATTRON(w, n)	wattron(w, COLOR_PAIR(n))
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
 WINDOW *display;
 bool fail = false, msg = false;
-uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0}, curr_shape, curr_pos;
+uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0}, curr_shape, curr_pos, level = 0;
 int curr_h = HEIGHT, curr_w, input = 0;
 uint64_t brick[7][4][4] = {
 	{{0x4, 0xE, 0x0, 0x0}, {0x4, 0xC, 0x4, 0x0}, {0x0, 0xE, 0x4, 0x0}, {0x4, 0x6, 0x4, 0x0}},
@@ -50,18 +53,43 @@ void update_score(){
 	WATTROFF(stdscr, COLOR_SCORE);
 }
 
+void update_level(){
+	WATTRON(stdscr, COLOR_LEVEL);
+	mvwprintw(stdscr, 7, 2+(WIDTH<<1)+2+2, "%8ld", level);
+	WATTROFF(stdscr, COLOR_LEVEL);
+}
+
 void show_bricks(){
 	wclear(display);
-	box(display, 0, 0);
+	WATTRON(display, COLOR_HINT);
+	bool bottom = false;
+	int temp_curr_h = curr_h;
+	while(!bottom){
+		for(int i = 0; i<4; i++){
+			if(temp_curr_h-1+i<0)
+				continue;
+			if((curr[i]&map[temp_curr_h-1+i])!=0){
+				bottom = true;
+				break;
+			}
+		}
+		temp_curr_h--;
+	}
+	temp_curr_h++;
+	for(int i = 3; i>=0; i--)
+		for(int j = WIDTH-1; j>=0; j--)
+			if(curr[i]&(((uint64_t)1)<<j))
+				mvwprintw(display, HEIGHT-temp_curr_h-i, ((WIDTH-j)<<1)-2, "  ");
+	WATTROFF(display, COLOR_HINT);
 	WATTRON(display, COLOR_BRICK);
 	for(int i = 1; i<=HEIGHT; i++)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(map[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-i+1, ((WIDTH-j)<<1)-1, "  ");
+				mvwprintw(display, HEIGHT-i, ((WIDTH-j)<<1)-2, "  ");
 	for(int i = 3; i>=0; i--)
 		for(int j = WIDTH-1; j>=0; j--)
 			if(curr[i]&(((uint64_t)1)<<j))
-				mvwprintw(display, HEIGHT-curr_h-i+1, ((WIDTH-j)<<1)-1, "  ");
+				mvwprintw(display, HEIGHT-curr_h-i, ((WIDTH-j)<<1)-2, "  ");
 	WATTROFF(display, COLOR_BRICK);
 	wrefresh(display);
 }
@@ -82,49 +110,30 @@ void new_brick(){
 	for(int i = temp; i<j; i++){
 		map[i-k] = map[i];
 		if(map[i]==FULLROW){
-			score++;
 			k++;
 			j = HEIGHT;
 		}
 	}
 	for(int i = HEIGHT+1-k; i<=HEIGHT; i++)
 		map[i] = 0;
+	score += k*k;
 	if(k>0)
 		update_score();
-	/*
-	 * TODO: Add a complete method to generate a new brick.
-	 *
-	curr_h = HEIGHT-3;
-	curr[0] = 0x3;
-	curr[1] = 0x6;
-	curr[2] = 0x0;
-	curr[3] = 0x0;
-	curr_w = 0;
-	curr_shape = 6;
-	curr_pos = 0;
-	*/
 	srand((unsigned)time(NULL));
 	curr_shape = rand()%7;
 	curr_pos = rand()%4;
 	curr_w = (int)(WIDTH)/2-2;
-	for(int i=0; i<4; i++){
+	for(int i = 0; i<4; i++)
 		curr[i] = brick[curr_shape][curr_pos][i]<<curr_w;
-	}
 	curr_h = HEIGHT-3;
-	for(int i=3; i>-1; i--){
-		if(curr[i]==0){
+	for(int i = 3; i>=0; i--)
+		if(curr[i]==0)
 			curr_h++;
-		}
-		else{
+		else
 			break;
-		}
-	}
-	for(int i=0; i<4; i++){
+	for(int i = 0; i<4; i++)
 		if((curr[i]&map[curr_h+i])!=0)
 			fail = true;
-	}
-	
-
 }
 
 void mv_left(){
@@ -164,8 +173,26 @@ void mv_down(){
 	show_bricks();
 }
 
+void mv_bottom(){
+	bool bottom = false;
+	while(!bottom){
+		for(int i = 0; i<4; i++){
+			if(curr_h-1+i<0)
+				continue;
+			if((curr[i]&map[curr_h-1+i])!=0){
+				bottom = true;
+				break;
+			}
+		}
+		curr_h--;
+	}
+	curr_h++;
+	mv_down();
+	show_bricks();
+}
+
 int test_collision(uint64_t test_brick[4]){
-	for(int i=0; i<4; i++){
+	for(int i = 0; i<4; i++){
 		if((test_brick[i]&BARRIER_W)!=0)
 			return true;
 		if(curr_w<0){
@@ -201,9 +228,12 @@ void turn(){
 }
 
 void *Timer(void *args){
+	uint64_t count = 0;
 	while(!fail){
-		usleep(1000000);
-		secs++;
+		level = (score/HEIGHT)+1;
+		usleep(1000000/level);
+		secs += (++count)==level;
+		count *= count!=level;
 		msg = true;
 	}
 	return NULL;
@@ -211,8 +241,10 @@ void *Timer(void *args){
 
 void *Handler(void *args){
 	while(!fail){
-		while(!kbhit());
+		if(!kbhit())
+			continue;
 		input = getch();
+		RELAX();
 	}
 	return NULL;
 }
@@ -230,7 +262,12 @@ int main(){
 	init_pair(COLOR_TIME, COLOR_YELLOW, COLOR_BLACK);
 	init_pair(COLOR_SCORE, COLOR_RED, COLOR_BLACK);
 	init_pair(COLOR_BRICK, COLOR_BLACK, COLOR_GREEN);
-	display = newwin(HEIGHT+2, (WIDTH<<1)+2, 1, 1);
+	init_pair(COLOR_LEVEL, COLOR_BLUE, COLOR_BLACK);
+	init_pair(COLOR_HINT, COLOR_BLACK, COLOR_WHITE);
+	WINDOW *display_border = newwin(HEIGHT+2, (WIDTH<<1)+2, 1, 1);
+	box(display_border, 0, 0);
+	wrefresh(display_border);
+	display = newwin(HEIGHT, WIDTH<<1, 2, 2);
 	leaveok(display, TRUE);
 	new_brick();
 	show_bricks();
@@ -238,6 +275,8 @@ int main(){
 	update_time();
 	mvwprintw(stdscr, 4, 2+(WIDTH<<1)+2+2, "Score:");
 	update_score();
+	mvwprintw(stdscr, 6, 2+(WIDTH<<1)+2+2, "Level:");
+	update_level();
 	wrefresh(stdscr);
 	pthread_t timer, handler;
 	pthread_create(&timer, NULL, Timer, NULL);
@@ -245,6 +284,7 @@ int main(){
 	while(!fail){
 		if(msg){
 			update_time();
+			update_level();
 			wrefresh(stdscr);
 			mv_down();
 			show_bricks();
@@ -264,12 +304,16 @@ int main(){
 			case 'd':
 				mv_right();
 				break;
+			case 10:				// For case ENTER pressed
+				mv_bottom();
+				break;
 			case 'q':
 				fail = true;
 				break;
 			}
 			input = 0;
 		}
+		RELAX();
 	}
 	EXIT(0);
 }
