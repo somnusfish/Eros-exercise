@@ -230,5 +230,4 @@ int main(){
 			EXIT(0);
 		}
 	}
-	EXIT(0);
 }
