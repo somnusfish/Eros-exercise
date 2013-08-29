@@ -106,20 +106,22 @@ void new_brick(){
 	for(int i = 0; i<4; i++)
 		if(curr_h+i>0)
 			map[curr_h+i] |= curr[i];
-	int temp = curr_h<1? 1 : curr_h, j = temp+4, k = 0;
+	int temp, j, k = 0;
+	temp = curr_h<1? 1 : curr_h;
+	j = temp+4<=HEIGHT+1? temp+4 : HEIGHT;
 	for(int i = temp; i<j; i++){
 		map[i-k] = map[i];
-		if(map[i]==FULLROW){
-			k++;
-			j = HEIGHT;
-		}
+		if(map[i]!=FULLROW)
+			continue;
+		k++;
+		j = HEIGHT+1;
 	}
 	for(int i = HEIGHT+1-k; i<=HEIGHT; i++)
 		map[i] = 0;
-	score += k*k;
+	score += level*k*k;
 	if(k>0)
 		update_score();
-	srand((unsigned)time(NULL));
+	wrefresh(stdscr);
 	curr_shape = rand()%7;
 	curr_pos = rand()%4;
 	curr_w = (int)(WIDTH)/2-2;
@@ -252,6 +254,7 @@ void *Handler(void *args){
 int main(){
 	for(int i = 1; i<=HEIGHT; map[i++] = 0);
 	map[0] = map[HEIGHT+1] = ALLONES;
+	srand((unsigned)time(NULL));
 	initscr();
 	nodelay(stdscr, FALSE);
 	curs_set(0);
