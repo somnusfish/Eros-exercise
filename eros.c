@@ -126,9 +126,10 @@ void new_brick(){
 	if(k>0)
 		update_score();
 	wrefresh(stdscr);
-	curr_shape = rand()%7;
-	curr_pos = rand()%4;
-	curr_w = (int)(WIDTH)/2-2;
+	int irand = rand();
+	curr_shape = irand%7;
+	curr_pos = irand%4;
+	curr_w = (WIDTH>>1)-2;
 	for(int i = 0; i<4; i++)
 		curr[i] = brick[curr_shape][curr_pos][i]<<curr_w;
 	curr_h = HEIGHT-3;
@@ -145,7 +146,7 @@ void new_brick(){
 void mv_left(){
 	for(int i = 0; i<4; i++){
 		uint64_t temp = curr[i]<<1;
-		if(((temp&BARRIER_W)!=0)||((temp&map[curr_h+i])!=0))
+		if((temp&(BARRIER_W|map[curr_h+i]))!=0)
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
@@ -199,19 +200,16 @@ void mv_bottom(){
 
 int test_collision(uint64_t test_brick[4]){
 	for(int i = 0; i<4; i++){
-		if((test_brick[i]&BARRIER_W)!=0)
+		if((test_brick[i]&(BARRIER_W|map[curr_h+i]))!=0)
 			return true;
 		if(curr_w<0){
 			uint64_t temp = brick[curr_shape][(curr_pos+1)%4][i];
-			for(int i = 1; i<=(-curr_w); i++){
+			for(int j = 1; j<=(-curr_w); j++){
 				if((temp%2)!=0)
 					return true;
 				temp >>= 1;
 			}
 		}
-		if((test_brick[i]&map[curr_h+i])!=0)
-			return true;
-
 	}
 	return false;
 }
@@ -332,8 +330,8 @@ int main(){
 	wclear(cong);
 	box(cong, 0, 0);
 	mvwprintw(cong, 1, (CONG_WIDTH-16)>>1, "Congratulations!");
-	mvwprintw(cong, 2, 3, "You have getten %ld scores at level %ld.", score, level);
-	mvwprintw(cong, 3, 3, "Press ENTER to share with friends or just press ");
+	mvwprintw(cong, 2, 1, "  You have getten %ld scores at level %ld.", score, level);
+	mvwprintw(cong, 3, 1, "  Press ENTER to share with friends or just press ");
 	mvwprintw(cong, 4, 1, "any other key to quit.");
 	wrefresh(cong);
 	if(getch()!=10)
