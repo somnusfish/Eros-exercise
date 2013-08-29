@@ -33,8 +33,8 @@
 
 WINDOW *display;
 bool fail = false, msg = false;
-uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0}, curr_shape, curr_pos, level = 0;
-int curr_h = HEIGHT, curr_w, input = 0;
+uint64_t secs = 0, score = 0, map[HEIGHT+2] = {0}, curr[4] = {0}, curr_shape, curr_pos, level = 0;
+int curr_h = HEIGHT, curr_w;
 uint64_t brick[7][4][4] = {
 	{{0x4, 0xE, 0x0, 0x0}, {0x4, 0xC, 0x4, 0x0}, {0x0, 0xE, 0x4, 0x0}, {0x4, 0x6, 0x4, 0x0}},
 	{{0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}},
@@ -243,19 +243,7 @@ void *Timer(void *args){
 	return NULL;
 }
 
-void *Handler(void *args){
-	while(!fail){
-		RELAX();
-		if(!kbhit())
-			continue;
-		input = getch();
-		RELAX();
-	}
-	return NULL;
-}
-
 int main(){
-	for(int i = 1; i<=HEIGHT; map[i++] = 0);
 	map[0] = map[HEIGHT+1] = ALLONES;
 	srand((unsigned)time(NULL));
 	initscr();
@@ -264,6 +252,7 @@ int main(){
 	noecho();
 	start_color();
 	leaveok(stdscr, TRUE);
+	wtimeout(stdscr, 0);
 	wrefresh(stdscr);
 	init_pair(COLOR_TIME,  COLOR_YELLOW, COLOR_BLACK);
 	init_pair(COLOR_SCORE, COLOR_RED,    COLOR_BLACK);
@@ -285,9 +274,8 @@ int main(){
 	mvwprintw(stdscr, 6, 2+(WIDTH<<1)+2+2, "Level:");
 	update_level();
 	wrefresh(stdscr);
-	pthread_t timer, handler;
+	pthread_t timer;
 	pthread_create(&timer, NULL, Timer, NULL);
-	pthread_create(&handler, NULL, Handler, NULL);
 	while(!fail){
 		if(msg){
 			update_time();
@@ -297,8 +285,8 @@ int main(){
 			show_bricks();
 			msg = false;
 		}
-		if(input!=0){
-			switch(input){
+		if(kbhit()){
+			switch(getch()){
 			case 'w':
 				turn();
 				break;
@@ -318,11 +306,9 @@ int main(){
 				fail = true;
 				break;
 			}
-			input = 0;
 		}
 		RELAX();
 	}
-	pthread_join(handler, NULL);
 	pthread_join(timer, NULL);
 	int row, col;
 	getmaxyx(stdscr, row, col);
@@ -331,10 +317,12 @@ int main(){
 	wclear(cong);
 	box(cong, 0, 0);
 	mvwprintw(cong, 1, (CONG_WIDTH-16)>>1, "Congratulations!");
-	mvwprintw(cong, 2, 1, "  You have getten %ld scores at level %ld.", score, level);
+	mvwprintw(cong, 2, 1, "  You\'ve getten %ld scores at level %ld.", score, level);
 	mvwprintw(cong, 3, 1, "  Press ENTER to share with friends or just press ");
 	mvwprintw(cong, 4, 1, "any other key to quit.");
 	wrefresh(cong);
+	while(!kbhit())
+		RELAX();
 	if(getch()!=10)
 		EXIT(0);
 	/*
