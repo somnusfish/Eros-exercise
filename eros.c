@@ -26,7 +26,16 @@
 WINDOW *display;
 bool fail = false;
 uint64_t secs = 0, score = 0, map[HEIGHT+1], curr[4] = {0}, curr_h = HEIGHT;
-uint64_t curr_cen , curr_shape , curr_pos;
+uint64_t curr_w , curr_shape , curr_pos;
+uint64_t brick[7][4][4] = {
+	{{0x4,0xE},{0x4,0xC,0x4},{0,0xE,0x4},{0x4,0x6,0x4}},
+	{{0x3,0x3},{0x3,0x3},{0x3,0x3},{0x3,0x3}},
+	{{0,0xf},{0x4,0x4,0x4,0x4},{0,0xf},{0x4,0x4,0x4,0x4}},
+	{{0x3,0x2,0x2},{0x4,0x7},{0x2,0x2,0x6},{0,0x7,0x1}},
+	{{0x6,0x2,0x2},{0,0x7,0x4},{0x2,0x2,0x3},{0x1,0x7}},
+	{{0x6,0x3},{0x1,0x3,0x2},{0x6,0x3},{0x1,0x3,0x2}},
+	{{0x3,0x6},{0x2,0x3,0x1},{0x3,0x6},{0x2,0x3,0x1}}
+			};
 
 void update_time(){
 	WATTRON(stdscr, COLOR_TIME);
@@ -82,10 +91,11 @@ void new_brick(){
 	 * TODO: Add a complete method to generate a new brick.
 	 */
 	curr_h = HEIGHT-4;
-	curr[0] = 0x4;
-	curr[1] = 0xE;
-	curr_cen = 0x2;
-	curr_shape = 0;
+	curr[0] = 0x3;
+	curr[1] = 0x6;
+	//curr[2] = 0x2;
+	curr_w = 0x0;
+	curr_shape = 6;
 	curr_pos = 0;
 }
 
@@ -96,7 +106,7 @@ void mv_left(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
-	curr_cen <<= 1;
+	curr_w <<= 1;
 	show_bricks();
 }
 
@@ -107,7 +117,7 @@ void mv_right(){
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] >>= 1);
-	curr_cen >>= 1;
+	curr_w >>= 1;
 	show_bricks();
 }
 
@@ -125,55 +135,26 @@ void mv_down(){
 	show_bricks();
 }
 
-void turn(){
-	switch (curr_shape){
-	case 0:{
-		switch (curr_pos){
-			case 0:{
-				uint64_t temp = curr_cen<<1;
-				if((temp&map[curr_h+2])!=0)
-					return;
-				curr[1] &= (~curr_cen);
-				curr[2] |= curr_cen<<1;
-				curr_pos = 1;
-				curr_cen <<= 1;
-			       }
-			       break;
-			case 1:{
-				uint64_t temp = curr_cen>>1;
-				if(((curr[1]%2)!=0)||((temp&map[curr_h+1])!=0))
-					return;
-				curr[0] &= (~curr_cen);
-				curr[1] |= curr_cen>>1;
-				curr_pos = 2;
-				curr_cen >>= 1;
-			       }
-			       break;
-			case 2:{
-				uint64_t temp = curr_cen<<1;
-				if((temp&map[curr_h])!=0)
-					return;
-				curr[0] |= curr_cen<<1;
-				curr[1] &= (~(curr_cen<<2));
-				curr_pos = 3;
-			       }
-			       break;
-			case 3:{
-				uint64_t temp = curr_cen<<2;
-				if(((temp&BARRIER_W)!=0) || ((temp&map[curr_h+1])!=0))
-					return;
-				curr[1] |= curr_cen<<2;
-				curr[2] &= (~(curr_cen<<1));
-				curr_pos = 0;
-			       }
-			       break;
-
-		}
-		break;
-
-	       }
-	       break;
+int test_collision(uint64_t test_brick[4]){
+	//if collision ,return 1,else ,return 0;
+	for(int i=0; i<4; i++){
+		if(((test_brick[i]&BARRIER_W)!=0)||((test_brick[i]%2)!=0)||((test_brick[i]&map[curr_h+i])!=0))
+			return 1;
 	}
+	return 0;
+}
+void turn(){
+	uint64_t temp[4];
+	for(int i=0; i<4; i++){
+		temp[i] = brick[curr_shape][(curr_pos+1)%4][i]<<curr_w;
+	}
+	if(!test_collision(temp)){
+		for(int i=0; i<4; i++){
+			curr[i] = temp[i];
+		}
+		curr_pos = (curr_pos+1)%4;
+	}
+	
 }
 void *Timer(void *args){
 	while(1){
