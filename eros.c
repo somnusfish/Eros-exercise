@@ -138,7 +138,7 @@ void mv_down(){
 int test_collision(uint64_t test_brick[4]){
 	//if collision ,return 1,else ,return 0;
 	for(int i=0; i<4; i++){
-		if(((test_brick[i]&BARRIER_W)!=0)||((test_brick[i]%2)!=0)||((test_brick[i]&map[curr_h+i])!=0))
+		if(((test_brick[i]&BARRIER_W)!=0)||((test_brick[i]&map[curr_h+i])!=0))
 			return 1;
 	}
 	return 0;
