@@ -24,9 +24,9 @@
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
 WINDOW *display;
-bool fail = false;
+bool fail = false, msg = false;
 uint64_t secs = 0, score = 0, map[HEIGHT+2], curr[4] = {0}, curr_shape, curr_pos;
-int curr_h = HEIGHT, curr_w;
+int curr_h = HEIGHT, curr_w, input = 0;
 uint64_t brick[7][4][4] = {
 	{{0x4, 0xE, 0x0, 0x0}, {0x4, 0xC, 0x4, 0x0}, {0x0, 0xE, 0x4, 0x0}, {0x4, 0x6, 0x4, 0x0}},
 	{{0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}, {0x3, 0x3, 0x0, 0x0}},
@@ -177,13 +177,18 @@ void turn(){
 }
 
 void *Timer(void *args){
-	while(1){
-		update_time();
-		wrefresh(stdscr);
+	while(!fail){
 		usleep(1000000);
 		secs++;
-		mv_down();
-		show_bricks();
+		msg = true;
+	}
+	return NULL;
+}
+
+void *Handler(void *args){
+	while(!fail){
+		while(!kbhit());
+		input = getch();
 	}
 	return NULL;
 }
@@ -192,6 +197,7 @@ int main(){
 	for(int i = 1; i<=HEIGHT; map[i++] = 0);
 	map[0] = map[HEIGHT+1] = ALLONES;
 	initscr();
+	nodelay(stdscr, FALSE);
 	curs_set(0);
 	noecho();
 	start_color();
@@ -205,29 +211,41 @@ int main(){
 	new_brick();
 	show_bricks();
 	mvwprintw(stdscr, 2, 2+(WIDTH<<1)+2+2, "Time:");
+	update_time();
 	mvwprintw(stdscr, 4, 2+(WIDTH<<1)+2+2, "Score:");
 	update_score();
 	wrefresh(stdscr);
-	pthread_t timer;
+	pthread_t timer, handler;
 	pthread_create(&timer, NULL, Timer, NULL);
-	nodelay(stdscr, FALSE);
+	pthread_create(&handler, NULL, Handler, NULL);
 	while(!fail){
-		while(!kbhit());
-		switch(getch()){
-		case 'w':
-			turn();
-			break;
-		case 'a':
-			mv_left();
-			break;
-		case 's':
+		if(msg){
+			update_time();
+			wrefresh(stdscr);
 			mv_down();
-			break;
-		case 'd':
-			mv_right();
-			break;
-		case 'q':
-			EXIT(0);
+			show_bricks();
+			msg = false;
+		}
+		if(input!=0){
+			switch(input){
+			case 'w':
+				turn();
+				break;
+			case 'a':
+				mv_left();
+				break;
+			case 's':
+				mv_down();
+				break;
+			case 'd':
+				mv_right();
+				break;
+			case 'q':
+				fail = true;
+				break;
+			}
+			input = 0;
 		}
 	}
+	EXIT(0);
 }
