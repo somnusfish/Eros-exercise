@@ -288,15 +288,19 @@ int main(){
 		if(kbhit()){
 			switch(getch()){
 			case 'w':
+			case 'W':
 				turn();
 				break;
 			case 'a':
+			case 'A':
 				mv_left();
 				break;
 			case 's':
+			case 'S':
 				mv_down();
 				break;
 			case 'd':
+			case 'D':
 				mv_right();
 				break;
 			case 10:				// For case ENTER pressed
@@ -304,6 +308,24 @@ int main(){
 				break;
 			case 'q':
 				fail = true;
+				break;
+			case 0x1b:			//For case arrow pressed
+				if(getch() == 0x5b){
+					switch(getch()){
+					case 0x41:
+						turn();
+						break;
+					case 0x44:
+						mv_left();
+						break;
+					case 0x43:
+						mv_right();
+						break;
+					case 0x42:
+						mv_down();
+						break;
+					}
+				}
 				break;
 			}
 		}
