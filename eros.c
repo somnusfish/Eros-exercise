@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 
 #define WIDTH		20					// WIDTH shouldn't be greater than 63.
 #define HEIGHT		20
@@ -32,7 +32,7 @@
 #define WATTROFF(w, n)	wattroff(w, COLOR_PAIR(n))
 
 WINDOW *display;
-bool fail = false, msg = false;
+bool fail = false;
 uint64_t secs = 0, score = 0, map[HEIGHT+2] = {0}, curr[4] = {0}, curr_shape, curr_pos, level = 0;
 int curr_h = HEIGHT, curr_w;
 uint64_t brick[7][4][4] = {
@@ -125,6 +125,7 @@ void new_brick(){
 	for(int i = HEIGHT+1-k; i<=HEIGHT; i++)
 		map[i] = 0;
 	score += level*k*k;
+	level = (score/HEIGHT)+1;
 	if(k>0)
 		update_score();
 	wrefresh(stdscr);
@@ -233,18 +234,6 @@ void turn(){
 	show_bricks();
 }
 
-void *Timer(void *args){
-	uint64_t count = 0;
-	while(!fail){
-		level = (score/HEIGHT)+1;
-		usleep(1000000/level);
-		secs += (++count)==level;
-		count *= count!=level;
-		msg = true;
-	}
-	return NULL;
-}
-
 int main(){
 	map[0] = map[HEIGHT+1] = ALLONES;
 	srand((unsigned)time(NULL));
@@ -274,16 +263,22 @@ int main(){
 	mvwprintw(stdscr, 6, 2+(WIDTH<<1)+2+2, "Level:");
 	update_level();
 	wrefresh(stdscr);
-	pthread_t timer;
-	pthread_create(&timer, NULL, Timer, NULL);
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	uint64_t count = 0;
 	while(!fail){
-		if(msg){
+		struct timeval temptv;
+		gettimeofday(&temptv, NULL);
+		tv.tv_sec = tv.tv_sec>temptv.tv_sec? -1 : tv.tv_sec;
+		if(((temptv.tv_sec-tv.tv_sec)*1000000+temptv.tv_usec-tv.tv_usec)>=1000000/level){
+			tv = temptv;
+			secs += (++count)==level;
+			count *= count!=level;
 			update_time();
 			update_level();
 			wrefresh(stdscr);
 			mv_down();
 			show_bricks();
-			msg = false;
 		}
 		if(kbhit()){
 			switch(getch()){
@@ -309,8 +304,8 @@ int main(){
 			case 'q':
 				fail = true;
 				break;
-			case 0x1b:			//For case arrow pressed
-				if(getch() == 0x5b){
+			case 0x1B:				// For case arrow pressed
+				if(getch()==0x5B)
 					switch(getch()){
 					case 0x41:
 						turn();
@@ -325,13 +320,11 @@ int main(){
 						mv_down();
 						break;
 					}
-				}
 				break;
 			}
 		}
 		RELAX();
 	}
-	pthread_join(timer, NULL);
 	int row, col;
 	getmaxyx(stdscr, row, col);
 	WINDOW *cong = newwin(CONG_HEIGHT, CONG_WIDTH, (row-CONG_HEIGHT)>>1, (col-CONG_WIDTH)>>1);
