@@ -142,14 +142,17 @@ void new_brick(){
 		else
 			break;
 	for(int i = 0; i<4; i++)
-		if((curr[i]&map[curr_h+i])!=0)
+		if((curr[i]&map[curr_h+i])!=0){
 			fail = true;
+			break;
+		}
 }
 
 void mv_left(){
 	for(int i = 0; i<4; i++){
-		uint64_t temp = curr[i]<<1;
-		if((temp&(BARRIER_W|map[curr_h+i]))!=0)
+		if(curr_h+i<0)
+			continue;
+		if(((curr[i]<<1)&(BARRIER_W|map[curr_h+i]))!=0)
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] <<= 1);
@@ -161,8 +164,7 @@ void mv_right(){
 	for(int i = 0; i<4; i++){
 		if(curr_h+i<0)
 			continue;
-		uint64_t temp = curr[i]>>1;
-		if(((curr[i]%2)!=0)||((temp&map[curr_h+i])!=0))
+		if(((curr[i]%2)!=0)||(((curr[i]>>1)&map[curr_h+i])!=0))
 			return;
 	}
 	for(int i = 0; i<4; curr[i++] >>= 1);
